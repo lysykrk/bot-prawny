@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { OpenAI } from 'openai'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+import { VertexAI } from '@google-cloud/vertexai'
 
 const SYSTEM_PROMPT = `Jesteś Bot Prawny - ekspertem w prawie polskim i pomocy w przygotowaniu dokumentów sądowych.
 
@@ -26,9 +22,12 @@ export async function POST(request: NextRequest) {
   try {
     const { message, documentContent, conversationHistory } = await request.json()
 
-    if (!process.env.OPENAI_API_KEY) {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID
+    const apiKey = process.env.GOOGLE_CLOUD_API_KEY
+
+    if (!projectId || !apiKey) {
       return NextResponse.json(
-        { error: 'API Key nie skonfigurowany' },
+        { error: 'Google Cloud credentials nie skonfigurowane' },
         { status: 500 }
       )
     }
@@ -40,6 +39,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const vertexAI = new VertexAI({
+      project: projectId,
+      location: 'us-central1',
+    })
+
     // Prepare conversation history
     const messages: any[] = []
 
@@ -47,11 +51,15 @@ export async function POST(request: NextRequest) {
     if (documentContent) {
       messages.push({
         role: 'user',
-        content: `Przeanalizuj poniższy dokument prawny:\n\n${documentContent.substring(0, 3000)}`,
+        parts: [{
+          text: `Przeanalizuj poniższy dokument prawny:\n\n${documentContent.substring(0, 3000)}`,
+        }],
       })
       messages.push({
-        role: 'assistant',
-        content: 'Przeanalizowałem dokument. Co chciałbyś wiedzieć?',
+        role: 'model',
+        parts: [{
+          text: 'Przeanalizowałem dokument. Co chciałbyś wiedzieć?',
+        }],
       })
     }
 
@@ -59,8 +67,10 @@ export async function POST(request: NextRequest) {
     if (conversationHistory && Array.isArray(conversationHistory)) {
       conversationHistory.forEach((msg: any) => {
         messages.push({
-          role: msg.role,
-          content: msg.content,
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{
+            text: msg.content,
+          }],
         })
       })
     }
@@ -68,23 +78,21 @@ export async function POST(request: NextRequest) {
     // Add current message
     messages.push({
       role: 'user',
-      content: message,
+      parts: [{
+        text: message,
+      }],
     })
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: SYSTEM_PROMPT,
-        },
-        ...messages,
-      ],
-      temperature: 0.7,
-      max_tokens: 1500,
+    const model = vertexAI.getGenerativeModel({
+      model: 'gemini-pro',
     })
 
-    const assistantMessage = response.choices[0]?.message?.content || 'Brak odpowiedzi'
+    const chat = model.startChat({
+      history: messages.slice(0, -1),
+    })
+
+    const response = await chat.sendMessage(message)
+    const assistantMessage = response.response.candidates?.[0]?.content?.parts?.[0]?.text || 'Brak odpowiedzi'
 
     return NextResponse.json({ response: assistantMessage })
   } catch (error: any) {
