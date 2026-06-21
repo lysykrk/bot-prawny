@@ -19,7 +19,7 @@ export default function ChatInterface({
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Cześć! Jestem Bot Prawny. Mogę pomóc Ci w analizie dokumentów prawnych i generowaniu wniosków do sądu. Wgraj dokument lub zadaj mi pytanie.',
+      content: 'Cześć! Jestem Bot Prawny. Mogę pomóc Ci w analizie dokumentów prawnych i generowaniu wniosków do sądu. Wgraj dokumenty lub zadaj mi pytanie.',
       timestamp: new Date(),
     },
   ])
@@ -139,7 +139,7 @@ export default function ChatInterface({
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Pytanie o dokument..."
+            placeholder="Pytanie o dokumenty..."
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
             disabled={loading}
           />

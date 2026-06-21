@@ -1,16 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, File, X } from 'lucide-react'
+import { Upload, File, X, Plus } from 'lucide-react'
+import type { Document } from '../page'
 
 export default function DocumentUpload({ 
-  onDocumentUpload, 
-  currentContent 
+  documents,
+  onAddDocument,
+  onRemoveDocument
 }: { 
-  onDocumentUpload: (content: string) => void
-  currentContent: string
+  documents: Document[]
+  onAddDocument: (name: string, content: string) => void
+  onRemoveDocument: (id: string) => void
 }) {
-  const [fileName, setFileName] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
 
@@ -33,8 +35,7 @@ export default function DocumentUpload({
       const data = await response.json()
 
       if (response.ok) {
-        onDocumentUpload(data.content)
-        setFileName(file.name)
+        onAddDocument(file.name, data.content)
       } else {
         setError(data.error || 'Błąd podczas przesyłania pliku')
       }
@@ -45,18 +46,12 @@ export default function DocumentUpload({
     }
   }
 
-  const handleClear = () => {
-    onDocumentUpload('')
-    setFileName('')
-    setError('')
-  }
-
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 h-[600px] flex flex-col">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">📄 Dokumenty</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">📄 Dokumenty ({documents.length})</h2>
 
       <div className="flex-1 flex flex-col">
-        {!currentContent ? (
+        {documents.length === 0 ? (
           <label className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-blue-500 transition flex flex-col items-center justify-center">
             <Upload className="w-12 h-12 text-gray-400 mb-2" />
             <p className="text-sm font-medium text-gray-700 text-center">
@@ -72,22 +67,44 @@ export default function DocumentUpload({
             />
           </label>
         ) : (
-          <div className="flex-1 bg-gray-50 rounded-lg p-4 overflow-y-auto border border-gray-200">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <File className="w-5 h-5 text-blue-500" />
-                <span className="font-medium text-sm text-gray-900">{fileName}</span>
-              </div>
-              <button
-                onClick={handleClear}
-                className="text-gray-400 hover:text-red-500 transition"
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-blue-300 transition"
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="text-xs text-gray-600 max-h-96 overflow-y-auto bg-white p-3 rounded border border-gray-200">
-              {currentContent.substring(0, 500)}...
-            </div>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <File className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <span className="font-medium text-sm text-gray-900 truncate">
+                      {doc.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => onRemoveDocument(doc.id)}
+                    className="text-gray-400 hover:text-red-500 transition flex-shrink-0 ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {Math.round(doc.content.length / 1024)} KB
+                </div>
+              </div>
+            ))}
+
+            {/* Add another document button */}
+            <label className="border-2 border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-500 transition flex items-center justify-center gap-2 text-gray-500 hover:text-blue-500">
+              <Plus className="w-4 h-4" />
+              <span className="text-xs font-medium">Dodaj dokument</span>
+              <input
+                type="file"
+                accept=".pdf,.docx,.txt,.doc"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={loading}
+              />
+            </label>
           </div>
         )}
 
@@ -101,9 +118,9 @@ export default function DocumentUpload({
       <div className="mt-4 text-xs text-gray-500 border-t border-gray-200 pt-4">
         <p className="font-medium mb-2">💡 Wskazówki:</p>
         <ul className="space-y-1">
-          <li>✓ Wgraj kodeks lub ustawę</li>
-          <li>✓ Dodaj postanowienie sądu</li>
-          <li>✓ Przygotuj notatki sprawy</li>
+          <li>✓ Dodaj wiele kodeksów</li>
+          <li>✓ Załącz postanowienia sądu</li>
+          <li>✓ Analizuj razem wszystkie dokumenty</li>
         </ul>
       </div>
     </div>

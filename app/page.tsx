@@ -5,9 +5,30 @@ import ChatInterface from './components/ChatInterface'
 import DocumentUpload from './components/DocumentUpload'
 import ExportPanel from './components/ExportPanel'
 
+export interface Document {
+  id: string
+  name: string
+  content: string
+}
+
 export default function Home() {
-  const [documentContent, setDocumentContent] = useState<string>('')
+  const [documents, setDocuments] = useState<Document[]>([])
   const [conversationHistory, setConversationHistory] = useState<Array<{role: string, content: string}>>([])
+
+  const handleAddDocument = (name: string, content: string) => {
+    const newDoc: Document = {
+      id: Date.now().toString(),
+      name,
+      content,
+    }
+    setDocuments(prev => [...prev, newDoc])
+  }
+
+  const handleRemoveDocument = (id: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== id))
+  }
+
+  const combinedContent = documents.map(doc => `--- ${doc.name} ---\n${doc.content}`).join('\n\n')
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -21,15 +42,16 @@ export default function Home() {
           {/* Left Panel - Upload */}
           <div className="lg:col-span-1">
             <DocumentUpload 
-              onDocumentUpload={setDocumentContent}
-              currentContent={documentContent}
+              documents={documents}
+              onAddDocument={handleAddDocument}
+              onRemoveDocument={handleRemoveDocument}
             />
           </div>
 
           {/* Middle Panel - Chat */}
           <div className="lg:col-span-1">
             <ChatInterface 
-              documentContent={documentContent}
+              documentContent={combinedContent}
               onConversationUpdate={setConversationHistory}
             />
           </div>
@@ -38,7 +60,7 @@ export default function Home() {
           <div className="lg:col-span-1">
             <ExportPanel 
               conversationHistory={conversationHistory}
-              documentContent={documentContent}
+              documentContent={combinedContent}
             />
           </div>
         </div>
