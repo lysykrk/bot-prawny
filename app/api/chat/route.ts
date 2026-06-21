@@ -18,27 +18,18 @@ Zawsze:
 - Proponuj poprawki i ulepszenia
 - Kiedy potrzeba, zastrzegaj, że to nie jest porada prawna od prawnika`
 
-let vertexAI: VertexAI | null = null
-
-function initializeVertexAI() {
-  if (!vertexAI) {
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID
-    
-    if (!projectId) {
-      throw new Error('GOOGLE_CLOUD_PROJECT_ID nie skonfigurowany')
-    }
-
-    vertexAI = new VertexAI({
-      project: projectId,
-      location: 'us-central1',
-    })
-  }
-  return vertexAI
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { message, documentContent, conversationHistory } = await request.json()
+
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'GOOGLE_CLOUD_PROJECT_ID nie skonfigurowany' },
+        { status: 500 }
+      )
+    }
 
     if (!message) {
       return NextResponse.json(
@@ -47,7 +38,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const vertexAI = initializeVertexAI()
+    const vertexAI = new VertexAI({
+      project: projectId,
+      location: 'us-central1',
+    })
 
     // Prepare conversation history
     const messages: any[] = []
@@ -80,20 +74,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Add current message
-    messages.push({
-      role: 'user',
-      parts: [{
-        text: message,
-      }],
-    })
-
     const model = vertexAI.getGenerativeModel({
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
     })
 
     const chat = model.startChat({
-      history: messages.slice(0, -1),
+      history: messages,
     })
 
     const response = await chat.sendMessage(message)
