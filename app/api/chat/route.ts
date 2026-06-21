@@ -18,19 +18,27 @@ Zawsze:
 - Proponuj poprawki i ulepszenia
 - Kiedy potrzeba, zastrzegaj, że to nie jest porada prawna od prawnika`
 
+let vertexAI: VertexAI | null = null
+
+function initializeVertexAI() {
+  if (!vertexAI) {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID
+    
+    if (!projectId) {
+      throw new Error('GOOGLE_CLOUD_PROJECT_ID nie skonfigurowany')
+    }
+
+    vertexAI = new VertexAI({
+      project: projectId,
+      location: 'us-central1',
+    })
+  }
+  return vertexAI
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { message, documentContent, conversationHistory } = await request.json()
-
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID
-    const apiKey = process.env.GOOGLE_CLOUD_API_KEY
-
-    if (!projectId || !apiKey) {
-      return NextResponse.json(
-        { error: 'Google Cloud credentials nie skonfigurowane' },
-        { status: 500 }
-      )
-    }
 
     if (!message) {
       return NextResponse.json(
@@ -39,10 +47,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const vertexAI = new VertexAI({
-      project: projectId,
-      location: 'us-central1',
-    })
+    const vertexAI = initializeVertexAI()
 
     // Prepare conversation history
     const messages: any[] = []
